@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String
+  createdAt     DateTime        @default(now())
+  ownedProjects Project[]       @relation("ProjectOwner")
+  memberships   ProjectMember[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  description String          @default("")
+  ownerId     String
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+}
+
+model ProjectMember {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id])
+  email     String
+  role      MemberRole   @default(MEMBER)
+  status    MemberStatus @default(PENDING)
+  invitedAt DateTime     @default(now())
+
+  @@unique([projectId, email])
+}

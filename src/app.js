@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dashboardRouter from './routes/dashboard.js'
+import projectsRouter from './routes/projects.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -33,6 +34,7 @@ app.get('/health', (_req, res) => {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/dashboard', dashboardRouter)
+app.use('/api/projects', projectsRouter)
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
