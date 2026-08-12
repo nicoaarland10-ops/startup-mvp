@@ -1,0 +1,87 @@
+import React from 'react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import ProjectsList from './ProjectsList.jsx'
+
+const mockProjects = [
+  {
+    id: 'proj_1',
+    name: 'LLM Prompt Optimisation',
+    description: 'Systematic evaluation of prompt templates.',
+    status: 'active',
+    collaborators: [{ id: 'u1' }, { id: 'u2' }, { id: 'u3' }],
+    lastActivity: new Date(Date.now() - 86400000).toISOString(), // yesterday
+    aiInsightsCount: 24,
+  },
+  {
+    id: 'proj_2',
+    name: 'Fine-Tuning Pipeline',
+    description: 'Automated supervised fine-tuning workflow.',
+    status: 'completed',
+    collaborators: [{ id: 'u4' }],
+    lastActivity: new Date(Date.now() - 5 * 86400000).toISOString(), // 5 days ago
+    aiInsightsCount: 31,
+  },
+  {
+    id: 'proj_3',
+    name: 'Vision Agent',
+    description: 'Multimodal agent for UI testing.',
+    status: 'in_review',
+    collaborators: [],
+    lastActivity: new Date().toISOString(), // today
+    aiInsightsCount: 9,
+  },
+]
+
+describe('ProjectsList', () => {
+  it('renders section heading', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+  })
+
+  it('renders all project names', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    // Names appear in both table and mobile cards
+    expect(screen.getAllByText('LLM Prompt Optimisation').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Fine-Tuning Pipeline').length).toBeGreaterThan(0)
+  })
+
+  it('shows total project count', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    expect(screen.getByText('3 total')).toBeInTheDocument()
+  })
+
+  it('shows status badges', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    expect(screen.getAllByText('Active').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Completed').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('In Review').length).toBeGreaterThan(0)
+  })
+
+  it('shows collaborator counts', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    // 3 members for proj_1 — appears in both table and mobile
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
+  })
+
+  it('shows AI insights counts', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    expect(screen.getAllByText('24').length).toBeGreaterThan(0)
+  })
+
+  it('shows relative dates', () => {
+    render(<ProjectsList projects={mockProjects} />)
+    expect(screen.getAllByText('Yesterday').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Today').length).toBeGreaterThan(0)
+  })
+
+  it('shows empty state when no projects', () => {
+    render(<ProjectsList projects={[]} />)
+    expect(screen.getByText(/No projects yet/i)).toBeInTheDocument()
+  })
+
+  it('shows empty state when prop omitted', () => {
+    render(<ProjectsList />)
+    expect(screen.getByText(/No projects yet/i)).toBeInTheDocument()
+  })
+})

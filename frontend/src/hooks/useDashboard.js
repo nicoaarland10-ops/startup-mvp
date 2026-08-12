@@ -1,0 +1,48 @@
+import { useState, useEffect, useCallback } from 'react'
+
+const BASE_URL = '/api/dashboard'
+
+async function fetchJSON(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  return res.json()
+}
+
+export function useDashboard() {
+  const [stats, setStats] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [activity, setActivity] = useState([])
+  const [insights, setInsights] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [statsData, projectsData, activityData, insightsData, notifData] = await Promise.all([
+        fetchJSON(`${BASE_URL}/stats`),
+        fetchJSON(`${BASE_URL}/projects`),
+        fetchJSON(`${BASE_URL}/activity`),
+        fetchJSON(`${BASE_URL}/insights`),
+        fetchJSON(`${BASE_URL}/notifications`),
+      ])
+      setStats(statsData)
+      setProjects(projectsData.projects ?? [])
+      setActivity(activityData.activities ?? [])
+      setInsights(insightsData.insights ?? [])
+      setNotifications(notifData.notifications ?? [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+  }, [fetchAll])
+
+  return { stats, projects, activity, insights, notifications, loading, error, refetch: fetchAll }
+}
