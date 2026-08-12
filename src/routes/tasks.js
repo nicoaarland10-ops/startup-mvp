@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireUser } from '../middleware/auth.js'
+import { createNotification } from '../lib/notifications.js'
 
 const router = Router()
 
@@ -44,6 +45,7 @@ function serializeTask(task) {
     createdById: task.createdById,
     createdBy: serializeUserRef(task.createdBy),
     commentCount: task._count?.comments ?? 0,
+    dueDate: task.dueDate,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
   }
@@ -79,7 +81,7 @@ async function requireProjectMembership(projectId, userId) {
 // Validates + normalizes create/patch bodies into a Prisma `data` object.
 // `partial: true` (PATCH) allows omitted fields and requires at least one present.
 async function buildTaskData(body, projectId, { partial }) {
-  const { title, description, status, priority, assigneeId } = body ?? {}
+  const { title, description, status, priority, assigneeId, dueDate } = body ?? {}
   const data = {}
 
   if (title !== undefined || !partial) {
@@ -127,6 +129,18 @@ async function buildTaskData(body, projectId, { partial }) {
         throw new AppError('The assignee must be an active member of the project.', 400, 'VALIDATION_ERROR')
       }
       data.assigneeId = assigneeId
+    }
+  }
+
+  if (dueDate !== undefined) {
+    if (dueDate === null) {
+      data.dueDate = null
+    } else {
+      const parsed = new Date(dueDate)
+      if (typeof dueDate !== 'string' || Number.isNaN(parsed.getTime())) {
+        throw new AppError('Field "dueDate" must be an ISO date string or null.', 400, 'VALIDATION_ERROR')
+      }
+      data.dueDate = parsed
     }
   }
 
@@ -179,6 +193,16 @@ router.post('/', wrap(async (req, res) => {
     data: { ...data, projectId, createdById: req.userId },
     include: TASK_INCLUDE,
   })
+
+  if (task.assigneeId && task.assigneeId !== req.userId) {
+    await createNotification({
+      userId: task.assigneeId,
+      type: 'TASK_ASSIGNED',
+      title: `You were assigned to "${task.title}"`,
+      body: task.description,
+      link: `/tasks/${task.id}`,
+    })
+  }
 
   res.status(201).json({ data: serializeTask(task) })
 }))
@@ -251,6 +275,7 @@ router.get('/:id', wrap(async (req, res) => {
  * PATCH /api/tasks/:id
  */
 router.patch('/:id', wrap(async (req, res) => {
+  const previousAssigneeId = req.task.assigneeId
   const data = await buildTaskData(req.body, req.task.projectId, { partial: true })
 
   const updated = await prisma.task.update({
@@ -258,6 +283,21 @@ router.patch('/:id', wrap(async (req, res) => {
     data,
     include: TASK_INCLUDE,
   })
+
+  if (
+    'assigneeId' in data &&
+    updated.assigneeId &&
+    updated.assigneeId !== previousAssigneeId &&
+    updated.assigneeId !== req.userId
+  ) {
+    await createNotification({
+      userId: updated.assigneeId,
+      type: 'TASK_ASSIGNED',
+      title: `You were assigned to "${updated.title}"`,
+      body: updated.description,
+      link: `/tasks/${updated.id}`,
+    })
+  }
 
   res.json({ data: serializeTask(updated) })
 }))
@@ -291,6 +331,18 @@ router.post('/:id/comments', wrap(async (req, res) => {
     data: { taskId: req.task.id, authorId: req.userId, body: body.trim() },
     include: { author: true },
   })
+
+  const recipients = new Set([req.task.assigneeId, req.task.createdById].filter(Boolean))
+  recipients.delete(req.userId)
+  for (const recipientId of recipients) {
+    await createNotification({
+      userId: recipientId,
+      type: 'TASK_COMMENTED',
+      title: `New comment on "${req.task.title}"`,
+      body: comment.body,
+      link: `/tasks/${req.task.id}`,
+    })
+  }
 
   res.status(201).json({ data: serializeComment(comment) })
 }))

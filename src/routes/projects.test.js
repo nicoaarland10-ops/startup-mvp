@@ -20,6 +20,7 @@ async function createProject(userId = OWNER, body = { name: 'Test Project' }) {
 }
 
 beforeEach(async () => {
+  await prisma.notification.deleteMany()
   await prisma.projectMember.deleteMany()
   await prisma.project.deleteMany()
   await prisma.user.deleteMany()
@@ -187,6 +188,23 @@ describe('POST /api/projects/:id/members', () => {
     const res = await as(OWNER).post(`/api/projects/${project.id}/members`, { email: `${OUTSIDER}@example.local`, role: 'ADMIN' })
     expect(res.status).toBe(201)
     expect(res.body.data).toMatchObject({ userId: OUTSIDER, role: 'ADMIN', status: 'ACTIVE' })
+  })
+
+  it('notifies the invited user when they already have an account', async () => {
+    const project = await createProject()
+    await createProject(OUTSIDER, { name: 'Outsider Project' })
+    await as(OWNER).post(`/api/projects/${project.id}/members`, { email: `${OUTSIDER}@example.local` })
+
+    const notifications = await prisma.notification.findMany({ where: { userId: OUTSIDER, type: 'MEMBER_INVITED' } })
+    expect(notifications).toHaveLength(1)
+  })
+
+  it('does not create a notification for a pending invite with no account', async () => {
+    const project = await createProject()
+    await as(OWNER).post(`/api/projects/${project.id}/members`, { email: 'no-account@example.com' })
+
+    const notifications = await prisma.notification.findMany({ where: { type: 'MEMBER_INVITED' } })
+    expect(notifications).toHaveLength(0)
   })
 
   it('returns 400 for an invalid email', async () => {

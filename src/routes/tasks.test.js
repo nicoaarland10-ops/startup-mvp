@@ -37,6 +37,7 @@ async function createTask(projectId, userId = OWNER, body = { title: 'Test Task'
 }
 
 beforeEach(async () => {
+  await prisma.notification.deleteMany()
   await prisma.comment.deleteMany()
   await prisma.task.deleteMany()
   await prisma.projectMember.deleteMany()
@@ -131,6 +132,23 @@ describe('POST /api/tasks', () => {
     const res = await as(OWNER).post('/api/tasks', { projectId: project.id, title: 'X', assigneeId: OUTSIDER })
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('VALIDATION_ERROR')
+  })
+
+  it('notifies the assignee when a task is created with an assignee', async () => {
+    const project = await createProject()
+    await addActiveMember(project, MEMBER)
+    await as(OWNER).post('/api/tasks', { projectId: project.id, title: 'Assigned on create', assigneeId: MEMBER })
+
+    const notifications = await prisma.notification.findMany({ where: { userId: MEMBER, type: 'TASK_ASSIGNED' } })
+    expect(notifications).toHaveLength(1)
+  })
+
+  it('does not notify the creator when self-assigning', async () => {
+    const project = await createProject()
+    await as(OWNER).post('/api/tasks', { projectId: project.id, title: 'Self assigned', assigneeId: OWNER })
+
+    const notifications = await prisma.notification.findMany({ where: { userId: OWNER, type: 'TASK_ASSIGNED' } })
+    expect(notifications).toHaveLength(0)
   })
 
   it('returns 404 when the project does not exist', async () => {
@@ -303,6 +321,31 @@ describe('PATCH /api/tasks/:id', () => {
     expect(res.body.error).toBe('VALIDATION_ERROR')
   })
 
+  it('notifies the new assignee when reassigned via PATCH', async () => {
+    const project = await createProject()
+    await addActiveMember(project, MEMBER)
+    const task = await createTask(project.id)
+
+    await as(OWNER).patch(`/api/tasks/${task.id}`, { assigneeId: MEMBER })
+
+    const notifications = await prisma.notification.findMany({ where: { userId: MEMBER, type: 'TASK_ASSIGNED' } })
+    expect(notifications).toHaveLength(1)
+  })
+
+  it('does not notify again when the assignee is unchanged', async () => {
+    const project = await createProject()
+    await addActiveMember(project, MEMBER)
+    // Creating with an assignee already fires one TASK_ASSIGNED notification.
+    const task = await createTask(project.id, OWNER, { title: 'Test Task', assigneeId: MEMBER })
+    const countAfterCreate = await prisma.notification.count({ where: { userId: MEMBER, type: 'TASK_ASSIGNED' } })
+    expect(countAfterCreate).toBe(1)
+
+    await as(OWNER).patch(`/api/tasks/${task.id}`, { title: 'Renamed only' })
+
+    const countAfterPatch = await prisma.notification.count({ where: { userId: MEMBER, type: 'TASK_ASSIGNED' } })
+    expect(countAfterPatch).toBe(1)
+  })
+
   it('returns 403 for a non-member', async () => {
     const project = await createProject()
     const task = await createTask(project.id)
@@ -387,6 +430,30 @@ describe('POST /api/tasks/:id/comments', () => {
   it('returns 404 for an unknown task', async () => {
     const res = await as(OWNER).post('/api/tasks/does-not-exist/comments', { body: 'Hi' })
     expect(res.status).toBe(404)
+  })
+
+  it('notifies the assignee and creator, excluding the commenter', async () => {
+    const project = await createProject()
+    await addActiveMember(project, MEMBER)
+    const task = await createTask(project.id, OWNER, { title: 'Test Task', assigneeId: MEMBER })
+
+    await as(MEMBER).post(`/api/tasks/${task.id}/comments`, { body: 'Assignee comments' })
+
+    const ownerNotifs = await prisma.notification.findMany({ where: { userId: OWNER, type: 'TASK_COMMENTED' } })
+    const assigneeNotifs = await prisma.notification.findMany({ where: { userId: MEMBER, type: 'TASK_COMMENTED' } })
+    expect(ownerNotifs).toHaveLength(1)
+    expect(assigneeNotifs).toHaveLength(0)
+  })
+
+  it('does not double-notify when the assignee and creator are the same person', async () => {
+    const project = await createProject()
+    await addActiveMember(project, MEMBER)
+    const task = await createTask(project.id, OWNER, { title: 'Test Task', assigneeId: OWNER })
+
+    await as(MEMBER).post(`/api/tasks/${task.id}/comments`, { body: 'Hi' })
+
+    const ownerNotifs = await prisma.notification.findMany({ where: { userId: OWNER, type: 'TASK_COMMENTED' } })
+    expect(ownerNotifs).toHaveLength(1)
   })
 })
 

@@ -59,7 +59,31 @@ const mockNotifResp = {
   ],
 }
 
+// Real notifications (Feature 5) served from /api/notifications, consumed by
+// the NotificationBell's useNotifications hook — distinct from the
+// /api/dashboard/notifications mock data above, which Dashboard no longer reads.
+const mockRealNotifResp = {
+  data: [
+    { id: 'rn1', userId: 'demo-user-1', type: 'TASK_ASSIGNED', title: 'You were assigned a task', body: 'Ship it', link: '/tasks/abc', read: false, createdAt: new Date().toISOString() },
+  ],
+  unreadCount: 1,
+  total: 1,
+}
+
+// Minimal fake WebSocket so NotificationBell's live-update connection never
+// attempts a real network connection during this test.
+class MockWebSocket {
+  constructor() {
+    this.readyState = 0
+    this.onopen = null
+    this.onmessage = null
+    this.onclose = null
+    this.close = vi.fn()
+  }
+}
+
 function setupFetch() {
+  vi.stubGlobal('WebSocket', MockWebSocket)
   global.fetch = vi.fn((url) => {
     const map = {
       '/api/dashboard/stats':         mockStats,
@@ -67,6 +91,7 @@ function setupFetch() {
       '/api/dashboard/activity':      mockActivityResp,
       '/api/dashboard/insights':      mockInsightsResp,
       '/api/dashboard/notifications': mockNotifResp,
+      '/api/notifications':           mockRealNotifResp,
     }
     const key = Object.keys(map).find((k) => url.includes(k))
     return Promise.resolve({ ok: true, json: () => Promise.resolve(key ? map[key] : {}) })
@@ -74,7 +99,10 @@ function setupFetch() {
 }
 
 beforeEach(setupFetch)
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 const renderDashboard = () =>
   render(<MemoryRouter><Dashboard /></MemoryRouter>)

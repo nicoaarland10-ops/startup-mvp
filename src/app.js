@@ -3,6 +3,9 @@ import cors from 'cors'
 import dashboardRouter from './routes/dashboard.js'
 import projectsRouter from './routes/projects.js'
 import tasksRouter from './routes/tasks.js'
+import notificationsRouter from './routes/notifications.js'
+import { attachNotificationsWebSocketServer } from './ws/notificationsServer.js'
+import { checkTaskDeadlines } from './lib/deadlineCheck.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -37,6 +40,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/projects', projectsRouter)
 app.use('/api/tasks', tasksRouter)
+app.use('/api/notifications', notificationsRouter)
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -69,10 +73,19 @@ app.use((err, req, res, _next) => {
 })
 
 // ── Start ─────────────────────────────────────────────────────────────────────
+const DEADLINE_CHECK_INTERVAL_MS = 60 * 60 * 1000 // hourly
+
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`[server] Listening on http://localhost:${PORT}`)
   })
+
+  attachNotificationsWebSocketServer(server)
+
+  checkTaskDeadlines().catch((err) => console.error('[deadline-check]', err))
+  setInterval(() => {
+    checkTaskDeadlines().catch((err) => console.error('[deadline-check]', err))
+  }, DEADLINE_CHECK_INTERVAL_MS)
 }
 
 export default app

@@ -17,6 +17,7 @@ model User {
   assignedTasks Task[]          @relation("TaskAssignee")
   createdTasks  Task[]          @relation("TaskCreator")
   comments      Comment[]
+  notifications Notification[]
 }
 
 model Project {
@@ -83,12 +84,14 @@ model Task {
   createdById String
   createdBy   User         @relation("TaskCreator", fields: [createdById], references: [id])
   comments    Comment[]
+  dueDate     DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([projectId, status])
   @@index([projectId, priority])
   @@index([projectId, assigneeId])
+  @@index([dueDate])
 }
 
 model Comment {
@@ -101,4 +104,26 @@ model Comment {
   createdAt DateTime @default(now())
 
   @@index([taskId])
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_COMMENTED
+  MEMBER_INVITED
+  TASK_DEADLINE
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String           @default("")
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

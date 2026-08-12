@@ -2,26 +2,8 @@ import StatsCard from './StatsCard.jsx'
 import ActivityFeed from './ActivityFeed.jsx'
 import AIInsightsPanel from './AIInsightsPanel.jsx'
 import ProjectsList from './ProjectsList.jsx'
+import NotificationBell from '../NotificationBell.jsx'
 import { useDashboard } from '../../hooks/useDashboard.js'
-
-function NotificationBell({ count }) {
-  return (
-    <button
-      aria-label={`${count} unread notifications`}
-      className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-    >
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V4a1 1 0 10-2 0v1.083A6 6 0 006 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-      </svg>
-      {count > 0 && (
-        <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium leading-none">
-          {count > 9 ? '9+' : count}
-        </span>
-      )}
-    </button>
-  )
-}
 
 function SkeletonCard() {
   return (
@@ -33,9 +15,7 @@ function SkeletonCard() {
 }
 
 export default function Dashboard() {
-  const { stats, projects, activity, insights, notifications, loading, error } = useDashboard()
-
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const { stats, projects, activity, insights, loading, error } = useDashboard()
 
   if (error) {
     return (
@@ -61,7 +41,7 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500 mt-0.5">Here's what's happening across your projects</p>
           </div>
           <div className="flex items-center gap-2">
-            <NotificationBell count={unreadCount} />
+            <NotificationBell />
             <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
               AI
             </div>

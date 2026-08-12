@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireUser } from '../middleware/auth.js'
+import { createNotification } from '../lib/notifications.js'
 
 const router = Router()
 
@@ -205,6 +206,16 @@ router.post('/:id/members', wrap(async (req, res) => {
     },
     include: { user: true },
   })
+
+  if (member.userId && member.userId !== req.userId) {
+    await createNotification({
+      userId: member.userId,
+      type: 'MEMBER_INVITED',
+      title: `You were added to "${req.project.name}"`,
+      body: `Role: ${member.role}`,
+      link: `/projects/${req.project.id}`,
+    })
+  }
 
   res.status(201).json({ data: serializeMember(member) })
 }))
