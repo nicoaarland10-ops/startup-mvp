@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useProject } from '../hooks/useProject.js'
 import MemberManager from '../components/project/MemberManager.jsx'
 import InviteForm from '../components/project/InviteForm.jsx'
+import KanbanBoard from '../components/project/KanbanBoard.jsx'
 
 function SkeletonBlock({ className }) {
   return <div className={`bg-gray-200 rounded animate-pulse ${className}`} />
@@ -234,6 +235,8 @@ export default function ProjectDetail() {
             </>
           )}
         </div>
+
+        <KanbanBoard projectId={project.id} members={project.members ?? []} />
 
         <MemberManager
           members={project.members ?? []}

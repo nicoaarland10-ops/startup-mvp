@@ -39,6 +39,11 @@ function renderPage(id = 'proj_1') {
 beforeEach(() => {
   global.fetch = vi.fn((url, options = {}) => {
     const method = options.method ?? 'GET'
+    if (url.startsWith('/api/tasks')) {
+      return method === 'GET'
+        ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+        : jsonResponse({}, 404)
+    }
     if (url === '/api/projects/proj_1' && method === 'GET') {
       return jsonResponse({ data: mockProject })
     }
@@ -80,6 +85,11 @@ describe('ProjectDetail', () => {
     const updated = { ...mockProject, name: 'Renamed Plan' }
     global.fetch = vi.fn((url, options = {}) => {
       const method = options.method ?? 'GET'
+      if (url.startsWith('/api/tasks')) {
+        return method === 'GET'
+          ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+          : jsonResponse({}, 404)
+      }
       if (method === 'GET') return jsonResponse({ data: mockProject })
       if (method === 'PATCH') return jsonResponse({ data: updated })
       return jsonResponse({}, 404)
@@ -100,6 +110,11 @@ describe('ProjectDetail', () => {
   it('requires a two-step confirmation before deleting, then navigates away', async () => {
     global.fetch = vi.fn((url, options = {}) => {
       const method = options.method ?? 'GET'
+      if (url.startsWith('/api/tasks')) {
+        return method === 'GET'
+          ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+          : jsonResponse({}, 404)
+      }
       if (method === 'GET') return jsonResponse({ data: mockProject })
       if (method === 'DELETE') return Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve(null) })
       return jsonResponse({}, 404)
@@ -119,6 +134,11 @@ describe('ProjectDetail', () => {
   it('shows a delete error and resets confirmation state on failure', async () => {
     global.fetch = vi.fn((url, options = {}) => {
       const method = options.method ?? 'GET'
+      if (url.startsWith('/api/tasks')) {
+        return method === 'GET'
+          ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+          : jsonResponse({}, 404)
+      }
       if (method === 'GET') return jsonResponse({ data: mockProject })
       if (method === 'DELETE') return jsonResponse({ error: 'FORBIDDEN', message: 'Only the owner can delete this project' }, 403)
       return jsonResponse({}, 404)
@@ -138,6 +158,11 @@ describe('ProjectDetail', () => {
     const newMember = { id: 'mem_2', projectId: 'proj_1', userId: null, email: 'new@test.com', name: null, role: 'MEMBER', status: 'PENDING', invitedAt: new Date().toISOString() }
     global.fetch = vi.fn((url, options = {}) => {
       const method = options.method ?? 'GET'
+      if (url.startsWith('/api/tasks')) {
+        return method === 'GET'
+          ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+          : jsonResponse({}, 404)
+      }
       if (method === 'GET') return jsonResponse({ data: mockProject })
       if (method === 'POST') return jsonResponse({ data: newMember }, 201)
       return jsonResponse({}, 404)
@@ -159,6 +184,11 @@ describe('ProjectDetail', () => {
 
     global.fetch = vi.fn((url, options = {}) => {
       const method = options.method ?? 'GET'
+      if (url.startsWith('/api/tasks')) {
+        return method === 'GET'
+          ? jsonResponse({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false } })
+          : jsonResponse({}, 404)
+      }
       if (method === 'GET') return jsonResponse({ data: projectWithAdmin })
       if (method === 'PATCH') return jsonResponse({ data: promoted })
       if (method === 'DELETE') return Promise.resolve({ ok: true, status: 204, json: () => Promise.resolve(null) })

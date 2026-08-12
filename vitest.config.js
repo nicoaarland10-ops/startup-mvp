@@ -13,6 +13,9 @@ export default defineConfig({
       DATABASE_URL: `file:${testDbPath}`,
     },
     globalSetup: ['./src/test/globalSetup.js'],
+    // Multiple test files share one SQLite file (test DB); run them sequentially
+    // to avoid cross-file races on beforeEach cleanup + FK constraints.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
