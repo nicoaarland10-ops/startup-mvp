@@ -2,6 +2,10 @@
   "name": "ai-collab-platform-backend",
   "version": "1.0.0",
   "type": "module",
+  "main": "src/app.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
