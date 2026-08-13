@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 
 const BASE_URL = 'https://startup-mvp-production.up.railway.app/api'
 async function fetchJSON(url) {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
+  const res = await fetch(url, { headers: { 'x-user-id': '1' } })  
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`)
     return res.json()
 }
 
