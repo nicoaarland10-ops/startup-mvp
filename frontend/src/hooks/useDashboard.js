@@ -28,11 +28,11 @@ export function useDashboard() {
         fetchJSON(`${BASE_URL}/insights`),
         fetchJSON(`${BASE_URL}/notifications`),
       ])
-      setStats(statsData)
-      setProjects(projectsData.projects ?? [])
-      setActivity(activityData.activities ?? [])
-      setInsights(insightsData.insights ?? [])
-      setNotifications(notifData.notifications ?? [])
+      setStats(statsData.data ?? statsData)
+      setProjects(projectsData.data ?? [])
+      setActivity(activityData.data ?? [])
+      setInsights(insightsData.data ?? [])
+      setNotifications(notifData.data ?? [])
     } catch (err) {
       setError(err.message)
     } finally {
