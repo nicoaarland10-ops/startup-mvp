@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const BASE_URL = '/api/dashboard'
+const BASE_URL = 'https://startup-mvp-production.up.railway.app/api/dashboard'
 
 async function fetchJSON(url) {
   const res = await fetch(url)
