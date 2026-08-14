@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5000
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') ?? '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'x-user-id'],
 }))
 
 app.use(express.json({ limit: '1mb' }))
