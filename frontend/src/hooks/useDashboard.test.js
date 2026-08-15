@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useDashboard } from './useDashboard.js'
 
@@ -10,10 +10,10 @@ const mockStats = {
   recentActivity: [],
 }
 
-const mockProjects = { projects: [{ id: 'proj_1', name: 'Test', status: 'active', collaborators: [], lastActivity: new Date().toISOString(), aiInsightsCount: 3 }] }
-const mockActivity = { activities: [{ id: 'act_1', type: 'document_created', user: { id: 'u1', name: 'Alice' }, action: 'created', target: 'Doc', timestamp: new Date().toISOString() }] }
-const mockInsights = { insights: [{ id: 'ins_1', title: 'Test Insight', description: 'Desc', type: 'performance', priority: 'high', createdAt: new Date().toISOString() }] }
-const mockNotifications = { notifications: [{ id: 'n1', type: 'mention', read: false, message: 'Hi', createdAt: new Date().toISOString() }] }
+const mockProjects = { data: [{ id: 'proj_1', name: 'Test', status: 'active', collaborators: [], lastActivity: new Date().toISOString(), aiInsightsCount: 3 }] }
+const mockActivity = { data: [{ id: 'act_1', type: 'document_created', user: { id: 'u1', name: 'Alice' }, action: 'created', target: 'Doc', timestamp: new Date().toISOString() }] }
+const mockInsights = { data: [{ id: 'ins_1', title: 'Test Insight', description: 'Desc', type: 'performance', priority: 'high', status: 'active', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] }
+const mockNotifications = { data: [{ id: 'n1', type: 'mention', title: 'Hi', body: null, link: null, read: false, createdAt: new Date().toISOString() }] }
 
 function setupFetchMock(overrides = {}) {
   const responses = {
@@ -103,5 +103,26 @@ describe('useDashboard', () => {
     expect(result.current.activity).toEqual([])
     expect(result.current.insights).toEqual([])
     expect(result.current.notifications).toEqual([])
+  })
+
+  it('actionInsight patches the insight in place with the server response', async () => {
+    const updated = { ...mockInsights.data[0], status: 'resolved' }
+
+    const { result } = renderHook(() => useDashboard())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    global.fetch = vi.fn((url, options = {}) => {
+      const method = options.method ?? 'GET'
+      if (method === 'PATCH' && url.includes('/insights/ins_1/action')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: updated }) })
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) })
+    })
+
+    await act(async () => {
+      await result.current.actionInsight('ins_1', 'resolve')
+    })
+
+    expect(result.current.insights[0].status).toBe('resolved')
   })
 })

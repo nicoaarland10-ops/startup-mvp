@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { apiFetch, getCurrentUserId } from '../lib/api.js'
+import { apiFetch } from '../lib/api.js'
 
-const BASE_URL = '/api/notifications'
-const RECONNECT_DELAY_MS = 3000
+const BASE_URL = '/api/dashboard/notifications'
+const POLL_INTERVAL_MS = 30000
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([])
@@ -37,45 +37,13 @@ export function useNotifications() {
     fetchNotifications()
   }, [fetchNotifications])
 
-  // Live push over WebSocket, with a simple fixed-delay reconnect.
+  // The mock dashboard API has no push channel, so poll for new
+  // notifications instead of holding open a WebSocket to a server that
+  // doesn't serve one.
   useEffect(() => {
-    let mounted = true
-    let ws = null
-    let reconnectTimer = null
-
-    function connect() {
-      if (!mounted) return
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      ws = new WebSocket(`${protocol}//${window.location.host}/ws/notifications?userId=${getCurrentUserId()}`)
-
-      ws.onmessage = (event) => {
-        let msg
-        try {
-          msg = JSON.parse(event.data)
-        } catch {
-          return
-        }
-        if (msg?.type === 'notification' && msg.data) {
-          setNotifications((prev) => [msg.data, ...prev])
-          setUnreadCount((prev) => prev + 1)
-        }
-      }
-
-      ws.onclose = () => {
-        if (mounted) {
-          reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS)
-        }
-      }
-    }
-
-    connect()
-
-    return () => {
-      mounted = false
-      if (reconnectTimer) clearTimeout(reconnectTimer)
-      if (ws) ws.close()
-    }
-  }, [])
+    const id = setInterval(fetchNotifications, POLL_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [fetchNotifications])
 
   const markAsRead = useCallback(async (id) => {
     const { data } = await apiFetch(`${BASE_URL}/${id}/read`, { method: 'PATCH' })

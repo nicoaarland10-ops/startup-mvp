@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import ProjectsList from './ProjectsList.jsx'
 
 const mockProjects = [
@@ -33,55 +34,81 @@ const mockProjects = [
   },
 ]
 
+function renderList(projects = mockProjects) {
+  return render(
+    <MemoryRouter initialEntries={['/dashboard']}>
+      <Routes>
+        <Route path="/dashboard" element={<ProjectsList projects={projects} />} />
+        <Route path="/dashboard/projects/:id" element={<div>Project overview page</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
 describe('ProjectsList', () => {
   it('renders section heading', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     expect(screen.getByText('Projects')).toBeInTheDocument()
   })
 
   it('renders all project names', () => {
-    render(<ProjectsList projects={mockProjects} />)
-    // Names appear in both table and mobile cards
+    renderList()
     expect(screen.getAllByText('LLM Prompt Optimisation').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Fine-Tuning Pipeline').length).toBeGreaterThan(0)
   })
 
   it('shows total project count', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     expect(screen.getByText('3 total')).toBeInTheDocument()
   })
 
   it('shows status badges', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     expect(screen.getAllByText('Active').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Completed').length).toBeGreaterThan(0)
     expect(screen.getAllByText('In Review').length).toBeGreaterThan(0)
   })
 
   it('shows collaborator counts', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     // 3 members for proj_1 — appears in both table and mobile
     expect(screen.getAllByText('3').length).toBeGreaterThan(0)
   })
 
   it('shows AI insights counts', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     expect(screen.getAllByText('24').length).toBeGreaterThan(0)
   })
 
   it('shows relative dates', () => {
-    render(<ProjectsList projects={mockProjects} />)
+    renderList()
     expect(screen.getAllByText('Yesterday').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Today').length).toBeGreaterThan(0)
   })
 
   it('shows empty state when no projects', () => {
-    render(<ProjectsList projects={[]} />)
+    renderList([])
     expect(screen.getByText(/No projects yet/i)).toBeInTheDocument()
   })
 
   it('shows empty state when prop omitted', () => {
-    render(<ProjectsList />)
+    render(
+      <MemoryRouter>
+        <ProjectsList />
+      </MemoryRouter>,
+    )
     expect(screen.getByText(/No projects yet/i)).toBeInTheDocument()
+  })
+
+  it('links a project name to its overview page', () => {
+    renderList()
+    const link = screen.getAllByRole('link', { name: 'LLM Prompt Optimisation' })[0]
+    expect(link).toHaveAttribute('href', '/dashboard/projects/proj_1')
+  })
+
+  it('navigates to the project overview when a table row is clicked', () => {
+    renderList()
+    fireEvent.click(screen.getAllByText('Fine-Tuning Pipeline')[0])
+    expect(screen.getByText('Project overview page')).toBeInTheDocument()
   })
 })

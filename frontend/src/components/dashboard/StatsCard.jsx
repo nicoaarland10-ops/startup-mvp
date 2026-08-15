@@ -1,4 +1,4 @@
-export default function StatsCard({ title, value, change, icon, color = 'blue' }) {
+export default function StatsCard({ title, value, change, icon, color = 'blue', subtitle = 'vs last week' }) {
   const isPositive = change >= 0
   const colorMap = {
     blue: 'bg-blue-50 text-blue-600',
@@ -29,7 +29,7 @@ export default function StatsCard({ title, value, change, icon, color = 'blue' }
           </span>
         )}
       </div>
-      <p className="text-xs text-gray-400 mt-1">vs last week</p>
+      <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
     </div>
   )
 }

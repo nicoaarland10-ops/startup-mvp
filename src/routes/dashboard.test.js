@@ -4,6 +4,7 @@ import app from '../app.js'
 
 const api = (path) => request(app).get(`/api/dashboard${path}`)
 const post = (path) => request(app).post(`/api/dashboard${path}`)
+const patch = (path) => request(app).patch(`/api/dashboard${path}`)
 
 // ── Health check ──────────────────────────────────────────────────────────────
 
@@ -280,6 +281,124 @@ describe('GET /api/dashboard/insights', () => {
     expect(res.body.data).toHaveLength(0)
     expect(res.body.total).toBe(0)
   })
+
+  it('every insight defaults to active status', async () => {
+    const res = await api('/insights')
+    for (const insight of res.body.data) {
+      expect(insight.status).toBe('active')
+    }
+  })
+
+  it('filters by status', async () => {
+    const res = await api('/insights?status=resolved')
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveLength(0)
+  })
+
+  it('returns 400 for an invalid status filter', async () => {
+    const res = await api('/insights?status=done')
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('INVALID_QUERY_PARAM')
+  })
+})
+
+// ── GET /api/dashboard/insights/:id ──────────────────────────────────────────
+
+describe('GET /api/dashboard/insights/:id', () => {
+  it('returns a single insight with project and recommended actions', async () => {
+    const res = await api('/insights/ins_001')
+    expect(res.status).toBe(200)
+    expect(res.body.data.id).toBe('ins_001')
+    expect(res.body.data.project).toMatchObject({ id: 'proj_002' })
+    expect(Array.isArray(res.body.data.recommendedActions)).toBe(true)
+    expect(res.body.data.recommendedActions.length).toBeGreaterThan(0)
+  })
+
+  it('returns 404 for an unknown insight id', async () => {
+    const res = await api('/insights/does_not_exist')
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe('NOT_FOUND')
+  })
+})
+
+// ── PATCH /api/dashboard/insights/:id/action ─────────────────────────────────
+
+describe('PATCH /api/dashboard/insights/:id/action', () => {
+  it('resolves an insight', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'resolve' })
+    expect(res.status).toBe(200)
+    expect(res.body.data.status).toBe('resolved')
+  })
+
+  it('snoozes an insight', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'snooze' })
+    expect(res.status).toBe(200)
+    expect(res.body.data.status).toBe('snoozed')
+  })
+
+  it('reopens an insight back to active', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'reopen' })
+    expect(res.status).toBe(200)
+    expect(res.body.data.status).toBe('active')
+  })
+
+  it('assigns an insight to a known user', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'reopen', assignee: 'usr_002' })
+    expect(res.status).toBe(200)
+    expect(res.body.data.assignee).toBe('usr_002')
+  })
+
+  it('returns 400 for an unknown assignee', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'reopen', assignee: 'usr_999' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('VALIDATION_ERROR')
+  })
+
+  it('returns 400 for an invalid action', async () => {
+    const res = await patch('/insights/ins_005/action').send({ action: 'delete' })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('VALIDATION_ERROR')
+  })
+
+  it('returns 404 for an unknown insight id', async () => {
+    const res = await patch('/insights/does_not_exist/action').send({ action: 'resolve' })
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe('NOT_FOUND')
+  })
+})
+
+// ── GET /api/dashboard/projects/:id/overview ─────────────────────────────────
+
+describe('GET /api/dashboard/projects/:id/overview', () => {
+  it('returns project with related insights and activity', async () => {
+    const res = await api('/projects/proj_002/overview')
+    expect(res.status).toBe(200)
+    expect(res.body.data.project.id).toBe('proj_002')
+    expect(res.body.data.insights.every((i) => i.projectId === 'proj_002')).toBe(true)
+    expect(res.body.data.activity.every((a) => a.projectId === 'proj_002')).toBe(true)
+  })
+
+  it('returns 404 for an unknown project id', async () => {
+    const res = await api('/projects/does_not_exist/overview')
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe('NOT_FOUND')
+  })
+})
+
+// ── GET /api/dashboard/team ───────────────────────────────────────────────────
+
+describe('GET /api/dashboard/team', () => {
+  it('returns every user with aggregated project counts', async () => {
+    const res = await api('/team')
+    expect(res.status).toBe(200)
+    expect(res.body.data.length).toBeGreaterThan(0)
+    for (const member of res.body.data) {
+      expect(member).toHaveProperty('id')
+      expect(member).toHaveProperty('name')
+      expect(typeof member.projectCount).toBe('number')
+      expect(Array.isArray(member.projects)).toBe(true)
+    }
+  })
 })
 
 // ── GET /api/dashboard/notifications ─────────────────────────────────────────
@@ -299,7 +418,7 @@ describe('GET /api/dashboard/notifications', () => {
       expect(notif).toHaveProperty('id')
       expect(notif).toHaveProperty('type')
       expect(notif).toHaveProperty('read')
-      expect(notif).toHaveProperty('message')
+      expect(notif).toHaveProperty('title')
       expect(notif).toHaveProperty('createdAt')
       expect(typeof notif.read).toBe('boolean')
     }
@@ -318,5 +437,34 @@ describe('GET /api/dashboard/notifications', () => {
     const unreadCount = full.body.unreadCount
     const unreadRes = await api('/notifications?unreadOnly=true')
     expect(unreadRes.body.data.length).toBe(unreadCount)
+  })
+})
+
+// ── PATCH /api/dashboard/notifications/:id/read ──────────────────────────────
+
+describe('PATCH /api/dashboard/notifications/:id/read', () => {
+  it('marks a notification as read', async () => {
+    const res = await patch('/notifications/notif_003/read')
+    expect(res.status).toBe(200)
+    expect(res.body.data.read).toBe(true)
+  })
+
+  it('returns 404 for an unknown notification id', async () => {
+    const res = await patch('/notifications/does_not_exist/read')
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe('NOT_FOUND')
+  })
+})
+
+// ── POST /api/dashboard/notifications/read-all ───────────────────────────────
+
+describe('POST /api/dashboard/notifications/read-all', () => {
+  it('marks every notification as read', async () => {
+    const res = await post('/notifications/read-all')
+    expect(res.status).toBe(200)
+    expect(res.body.data.every((n) => n.read === true)).toBe(true)
+
+    const followUp = await api('/notifications')
+    expect(followUp.body.unreadCount).toBe(0)
   })
 })

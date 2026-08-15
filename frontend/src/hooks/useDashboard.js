@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 
 const BASE_URL = 'https://startup-mvp-production.up.railway.app/api/dashboard'
 
-async function fetchJSON(url) {
-  const res = await fetch(url)
+async function fetchJSON(url, options) {
+  const res = await fetch(url, options)
   if (!res.ok) throw new Error(`Request failed: ${res.status}`)
   return res.json()
 }
@@ -44,5 +44,15 @@ export function useDashboard() {
     fetchAll()
   }, [fetchAll])
 
-  return { stats, projects, activity, insights, notifications, loading, error, refetch: fetchAll }
+  const actionInsight = useCallback(async (id, action, assignee) => {
+    const { data } = await fetchJSON(`${BASE_URL}/insights/${id}/action`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...(assignee !== undefined ? { assignee } : {}) }),
+    })
+    setInsights((prev) => prev.map((i) => (i.id === id ? data : i)))
+    return data
+  }, [])
+
+  return { stats, projects, activity, insights, notifications, loading, error, refetch: fetchAll, actionInsight }
 }

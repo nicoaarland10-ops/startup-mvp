@@ -13,7 +13,7 @@ const mockStats = {
 }
 
 const mockProjectsResp = {
-  projects: [
+  data: [
     {
       id: 'proj_1',
       name: 'Test Project',
@@ -27,7 +27,7 @@ const mockProjectsResp = {
 }
 
 const mockActivityResp = {
-  activities: [
+  data: [
     {
       id: 'act_1',
       type: 'document_created',
@@ -40,50 +40,32 @@ const mockActivityResp = {
 }
 
 const mockInsightsResp = {
-  insights: [
+  data: [
     {
       id: 'ins_1',
       title: 'Performance Opportunity',
       description: 'Switch to chain-of-thought prompting.',
       type: 'performance',
       priority: 'high',
+      status: 'active',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
   ],
 }
 
+// Consumed by both useDashboard (Dashboard's own read) and the
+// NotificationBell's useNotifications hook, which now shares this endpoint.
 const mockNotifResp = {
-  notifications: [
-    { id: 'n1', type: 'mention', read: false, message: 'Hi', createdAt: new Date().toISOString() },
-    { id: 'n2', type: 'insight', read: true,  message: 'New insight', createdAt: new Date().toISOString() },
-  ],
-}
-
-// Real notifications (Feature 5) served from /api/notifications, consumed by
-// the NotificationBell's useNotifications hook — distinct from the
-// /api/dashboard/notifications mock data above, which Dashboard no longer reads.
-const mockRealNotifResp = {
   data: [
-    { id: 'rn1', userId: 'demo-user-1', type: 'TASK_ASSIGNED', title: 'You were assigned a task', body: 'Ship it', link: '/tasks/abc', read: false, createdAt: new Date().toISOString() },
+    { id: 'n1', type: 'mention', title: 'Hi', body: null, link: null, read: false, createdAt: new Date().toISOString() },
+    { id: 'n2', type: 'insight', title: 'New insight', body: null, link: null, read: true, createdAt: new Date().toISOString() },
   ],
   unreadCount: 1,
-  total: 1,
-}
-
-// Minimal fake WebSocket so NotificationBell's live-update connection never
-// attempts a real network connection during this test.
-class MockWebSocket {
-  constructor() {
-    this.readyState = 0
-    this.onopen = null
-    this.onmessage = null
-    this.onclose = null
-    this.close = vi.fn()
-  }
+  total: 2,
 }
 
 function setupFetch() {
-  vi.stubGlobal('WebSocket', MockWebSocket)
   global.fetch = vi.fn((url) => {
     const map = {
       '/api/dashboard/stats':         mockStats,
@@ -91,7 +73,6 @@ function setupFetch() {
       '/api/dashboard/activity':      mockActivityResp,
       '/api/dashboard/insights':      mockInsightsResp,
       '/api/dashboard/notifications': mockNotifResp,
-      '/api/notifications':           mockRealNotifResp,
     }
     const key = Object.keys(map).find((k) => url.includes(k))
     return Promise.resolve({ ok: true, json: () => Promise.resolve(key ? map[key] : {}) })

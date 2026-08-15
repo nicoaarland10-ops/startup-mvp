@@ -15,7 +15,11 @@ function SkeletonCard() {
 }
 
 export default function Dashboard() {
-  const { stats, projects, activity, insights, loading, error } = useDashboard()
+  const { stats, projects, activity, insights, loading, error, actionInsight } = useDashboard()
+
+  const actionedPct = insights.length > 0
+    ? Math.round((insights.filter((i) => i.status && i.status !== 'active').length / insights.length) * 100)
+    : 0
 
   if (error) {
     return (
@@ -33,9 +37,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 truncate">
               Good morning, <span className="text-indigo-600">Team</span> 👋
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">Here's what's happening across your projects</p>
@@ -52,15 +56,22 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Stats row */}
         <section aria-label="Key metrics">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {loading ? (
-              Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+              Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
             ) : (
               <>
                 <StatsCard title="Total Projects"       value={stats?.totalProjects}       change={12} icon="🗂️" color="indigo" />
                 <StatsCard title="Active Collaborators" value={stats?.activeCollaborators}  change={8}  icon="👥" color="blue" />
                 <StatsCard title="AI Insights"          value={stats?.aiInsightsGenerated} change={34} icon="🧠" color="purple" />
                 <StatsCard title="Tasks Completed"      value={stats?.tasksCompleted}      change={-3} icon="✅" color="green" />
+                <StatsCard
+                  title="Insights Actioned"
+                  value={`${actionedPct}%`}
+                  icon="🎯"
+                  color="indigo"
+                  subtitle="resolved, snoozed, or archived"
+                />
               </>
             )}
           </div>
@@ -72,7 +83,7 @@ export default function Dashboard() {
             <ActivityFeed activities={loading ? [] : activity} />
           </div>
           <div className="lg:col-span-2">
-            <AIInsightsPanel insights={loading ? [] : insights} />
+            <AIInsightsPanel insights={loading ? [] : insights} onAction={actionInsight} />
           </div>
         </section>
 

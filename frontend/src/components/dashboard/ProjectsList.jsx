@@ -1,3 +1,5 @@
+import { Link, useNavigate } from 'react-router-dom'
+
 const statusConfig = {
   active:    { label: 'Active',    className: 'bg-green-100 text-green-700' },
   in_review: { label: 'In Review', className: 'bg-blue-100 text-blue-700' },
@@ -15,6 +17,8 @@ function relativeDate(isoString) {
 }
 
 export default function ProjectsList({ projects = [] }) {
+  const navigate = useNavigate()
+
   if (projects.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
@@ -51,10 +55,21 @@ export default function ProjectsList({ projects = [] }) {
                   key={project.id}
                   className="hover:bg-gray-50 cursor-pointer transition-colors"
                   role="row"
+                  tabIndex={0}
+                  onClick={() => navigate(`/dashboard/projects/${project.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') navigate(`/dashboard/projects/${project.id}`)
+                  }}
                 >
                   <td className="py-3 pr-4">
                     <div>
-                      <p className="font-medium text-gray-900">{project.name}</p>
+                      <Link
+                        to={`/dashboard/projects/${project.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-gray-900 hover:text-indigo-700 hover:underline"
+                      >
+                        {project.name}
+                      </Link>
                       {project.description && (
                         <p className="text-xs text-gray-400 truncate max-w-xs">{project.description}</p>
                       )}
@@ -90,16 +105,21 @@ export default function ProjectsList({ projects = [] }) {
         {projects.map((project) => {
           const status = statusConfig[project.status] ?? { label: project.status, className: 'bg-gray-100 text-gray-500' }
           return (
-            <li key={project.id} className="border border-gray-100 rounded-lg p-3">
-              <div className="flex items-start justify-between mb-1">
-                <p className="font-medium text-gray-900 text-sm">{project.name}</p>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.className}`}>{status.label}</span>
-              </div>
-              <div className="flex gap-4 text-xs text-gray-500 mt-2">
-                <span>{project.collaborators?.length ?? 0} members</span>
-                <span>{project.aiInsightsCount} insights</span>
-                <span>{relativeDate(project.lastActivity)}</span>
-              </div>
+            <li key={project.id}>
+              <Link
+                to={`/dashboard/projects/${project.id}`}
+                className="block border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-1">
+                  <p className="font-medium text-gray-900 text-sm">{project.name}</p>
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.className}`}>{status.label}</span>
+                </div>
+                <div className="flex gap-4 text-xs text-gray-500 mt-2">
+                  <span>{project.collaborators?.length ?? 0} members</span>
+                  <span>{project.aiInsightsCount} insights</span>
+                  <span>{relativeDate(project.lastActivity)}</span>
+                </div>
+              </Link>
             </li>
           )
         })}

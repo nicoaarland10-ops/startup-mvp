@@ -154,15 +154,51 @@ const ACTIVITY_FEED = [
   },
 ]
 
-const INSIGHTS = [
+// Type → suggested next steps. Shown on the insight detail page so an insight
+// always ships with something actionable, not just a diagnosis.
+const RECOMMENDED_ACTIONS = {
+  collaboration: [
+    'Redistribute reviewer load across the team',
+    'Set a 24-hour review SLA for open pull requests',
+    'Add a second reviewer rotation for high-traffic files',
+  ],
+  performance: [
+    'Switch the production template to the winning variant',
+    'Roll out behind a feature flag and monitor hallucination rate',
+    'Archive the losing variant to keep the prompt library clean',
+  ],
+  productivity: [
+    'Schedule a recurring sync during the identified peak window',
+    'Share the finding with team leads for calendar planning',
+  ],
+  data_quality: [
+    'Augment the dataset with multilingual pairs before the next run',
+    'Flag the affected training run for re-evaluation',
+    'Add a language-balance check to the data pipeline',
+  ],
+  quality: [
+    'Prioritise the 12 suggested test scenarios in the next sprint',
+    'Add coverage gates for low-contrast and dark-mode cases',
+  ],
+  security: [
+    'Prioritise mitigations for the tool-use attack category',
+    'Escalate to the security review channel',
+    'Re-run the red-team suite after mitigations ship',
+  ],
+}
+
+let INSIGHTS = [
   {
     id: 'ins_001',
     title: 'Review Cycle Bottleneck Detected',
     description: 'Pull-request review latency on the RAG Knowledge Base project has increased by 38% over the last two weeks. Three reviewers account for 80% of unreviewed items. Consider redistributing the reviewer load or setting a 24-hour SLA.',
     type: 'collaboration',
     priority: 'high',
+    status: 'active',
     projectId: 'proj_002',
+    assignee: null,
     createdAt: '2026-08-12T07:55:00Z',
+    updatedAt: '2026-08-12T07:55:00Z',
   },
   {
     id: 'ins_002',
@@ -170,8 +206,11 @@ const INSIGHTS = [
     description: 'Chain-of-thought prompts outperform direct-answer prompts by 14.2% on the internal reasoning benchmark (n = 1,200). Switching the production template is estimated to reduce hallucination rate from 6.1% to 3.8%.',
     type: 'performance',
     priority: 'high',
+    status: 'active',
     projectId: 'proj_001',
+    assignee: null,
     createdAt: '2026-08-11T18:00:00Z',
+    updatedAt: '2026-08-11T18:00:00Z',
   },
   {
     id: 'ins_003',
@@ -179,8 +218,11 @@ const INSIGHTS = [
     description: 'Commit and comment activity peaks between 09:00–11:30 UTC across all five active collaborators. Scheduling synchronous sessions in this window could reduce async back-and-forth by an estimated 25%.',
     type: 'productivity',
     priority: 'medium',
+    status: 'active',
     projectId: null,
+    assignee: null,
     createdAt: '2026-08-11T12:00:00Z',
+    updatedAt: '2026-08-11T12:00:00Z',
   },
   {
     id: 'ins_004',
@@ -188,8 +230,11 @@ const INSIGHTS = [
     description: 'Preference data collected in weeks 3–4 shows a 2.3× over-representation of English-language examples. Non-English task performance may degrade post fine-tune. Recommend augmenting with multilingual pairs before next training run.',
     type: 'data_quality',
     priority: 'high',
+    status: 'active',
     projectId: 'proj_004',
+    assignee: null,
     createdAt: '2026-08-10T10:30:00Z',
+    updatedAt: '2026-08-10T10:30:00Z',
   },
   {
     id: 'ins_005',
@@ -197,8 +242,11 @@ const INSIGHTS = [
     description: 'The Multimodal Vision Agent currently has 41% automated test coverage on UI parsing logic. Edge cases around low-contrast and dark-mode screenshots are untested. 12 suggested test scenarios are attached.',
     type: 'quality',
     priority: 'medium',
+    status: 'active',
     projectId: 'proj_003',
+    assignee: null,
     createdAt: '2026-08-09T09:15:00Z',
+    updatedAt: '2026-08-09T09:15:00Z',
   },
   {
     id: 'ins_006',
@@ -206,8 +254,11 @@ const INSIGHTS = [
     description: 'Seven new jailbreak vectors were logged this week, a 75% increase over the previous period. The tool-use attack category is the fastest-growing segment. Recommend prioritising mitigations in the next sprint.',
     type: 'security',
     priority: 'critical',
+    status: 'active',
     projectId: 'proj_005',
+    assignee: null,
     createdAt: '2026-08-08T14:00:00Z',
+    updatedAt: '2026-08-08T14:00:00Z',
   },
 ]
 
@@ -216,7 +267,7 @@ const NOTIFICATIONS = [
     id: 'notif_001',
     type: 'mention',
     read: false,
-    message: 'Bob Ramirez mentioned you in "Semantic chunking strategy comparison".',
+    title: 'Bob Ramirez mentioned you in "Semantic chunking strategy comparison".',
     link: '/projects/proj_002/discussions/42',
     createdAt: '2026-08-12T08:50:00Z',
   },
@@ -224,7 +275,7 @@ const NOTIFICATIONS = [
     id: 'notif_002',
     type: 'insight',
     read: false,
-    message: 'New critical insight: Red-Teaming Attack Surface Growing.',
+    title: 'New critical insight: Red-Teaming Attack Surface Growing.',
     link: '/insights/ins_006',
     createdAt: '2026-08-12T07:55:00Z',
   },
@@ -232,7 +283,7 @@ const NOTIFICATIONS = [
     id: 'notif_003',
     type: 'task_assigned',
     read: false,
-    message: 'Clara Müller assigned you to "Evaluate multilingual prompt coverage".',
+    title: 'Clara Müller assigned you to "Evaluate multilingual prompt coverage".',
     link: '/projects/proj_001/tasks/88',
     createdAt: '2026-08-11T15:30:00Z',
   },
@@ -240,7 +291,7 @@ const NOTIFICATIONS = [
     id: 'notif_004',
     type: 'project_update',
     read: true,
-    message: 'Fine-Tuning Pipeline has been marked as completed.',
+    title: 'Fine-Tuning Pipeline has been marked as completed.',
     link: '/projects/proj_004',
     createdAt: '2026-08-11T14:45:00Z',
   },
@@ -248,7 +299,7 @@ const NOTIFICATIONS = [
     id: 'notif_005',
     type: 'comment',
     read: true,
-    message: 'David Okafor replied to your comment on "Implement re-ranking with cross-encoder".',
+    title: 'David Okafor replied to your comment on "Implement re-ranking with cross-encoder".',
     link: '/projects/proj_002/tasks/55',
     createdAt: '2026-08-11T13:20:00Z',
   },
@@ -349,10 +400,10 @@ router.get('/activity', wrap((req, res) => {
 }))
 
 /**
- * GET /api/dashboard/insights?priority=high&type=collaboration
+ * GET /api/dashboard/insights?priority=high&type=collaboration&status=active
  */
 router.get('/insights', wrap((req, res) => {
-  const { priority, type } = req.query
+  const { priority, type, status } = req.query
 
   let filtered = INSIGHTS
 
@@ -372,7 +423,106 @@ router.get('/insights', wrap((req, res) => {
     filtered = filtered.filter((i) => i.type === type)
   }
 
+  if (status) {
+    const allowed = ['active', 'snoozed', 'resolved', 'archived']
+    if (!allowed.includes(status)) {
+      throw new AppError(
+        `Invalid status filter. Allowed values: ${allowed.join(', ')}.`,
+        400,
+        'INVALID_QUERY_PARAM',
+      )
+    }
+    filtered = filtered.filter((i) => i.status === status)
+  }
+
   res.json({ data: filtered, total: filtered.length })
+}))
+
+/**
+ * GET /api/dashboard/insights/:id
+ */
+router.get('/insights/:id', wrap((req, res) => {
+  const insight = INSIGHTS.find((i) => i.id === req.params.id)
+  if (!insight) {
+    throw new AppError('Insight not found.', 404, 'NOT_FOUND')
+  }
+  const project = projects.find((p) => p.id === insight.projectId) ?? null
+  res.json({
+    data: {
+      ...insight,
+      project: project ? { id: project.id, name: project.name } : null,
+      recommendedActions: RECOMMENDED_ACTIONS[insight.type] ?? [],
+    },
+  })
+}))
+
+/**
+ * PATCH /api/dashboard/insights/:id/action
+ * body: { action: 'resolve' | 'snooze' | 'archive' | 'reopen', assignee?: string }
+ */
+router.patch('/insights/:id/action', wrap((req, res) => {
+  const insight = INSIGHTS.find((i) => i.id === req.params.id)
+  if (!insight) {
+    throw new AppError('Insight not found.', 404, 'NOT_FOUND')
+  }
+
+  const { action, assignee } = req.body ?? {}
+  const statusByAction = { resolve: 'resolved', snooze: 'snoozed', archive: 'archived', reopen: 'active' }
+  if (!action || !statusByAction[action]) {
+    throw new AppError(
+      `Field "action" must be one of: ${Object.keys(statusByAction).join(', ')}.`,
+      400,
+      'VALIDATION_ERROR',
+    )
+  }
+
+  insight.status = statusByAction[action]
+  insight.updatedAt = new Date().toISOString()
+  if (assignee !== undefined) {
+    if (assignee !== null && !USERS.some((u) => u.id === assignee)) {
+      throw new AppError('Unknown assignee id.', 400, 'VALIDATION_ERROR')
+    }
+    insight.assignee = assignee
+  }
+
+  res.json({ data: insight })
+}))
+
+/**
+ * GET /api/dashboard/projects/:id/overview
+ */
+router.get('/projects/:id/overview', wrap((req, res) => {
+  const project = projects.find((p) => p.id === req.params.id)
+  if (!project) {
+    throw new AppError('Project not found.', 404, 'NOT_FOUND')
+  }
+
+  res.json({
+    data: {
+      project,
+      insights: INSIGHTS.filter((i) => i.projectId === project.id),
+      activity: ACTIVITY_FEED.filter((a) => a.projectId === project.id),
+    },
+  })
+}))
+
+/**
+ * GET /api/dashboard/team
+ */
+router.get('/team', wrap((_req, res) => {
+  const members = USERS.map((user) => {
+    const memberProjects = projects.filter((p) => p.collaborators.some((c) => c.id === user.id))
+    const openInsights = INSIGHTS.filter(
+      (i) => i.status === 'active' && memberProjects.some((p) => p.id === i.projectId),
+    ).length
+    return {
+      ...user,
+      projectCount: memberProjects.length,
+      projects: memberProjects.map((p) => ({ id: p.id, name: p.name })),
+      openInsights,
+    }
+  })
+  res.json({ data: members, total: members.length })
 }))
 
 /**
@@ -386,6 +536,26 @@ router.get('/notifications', wrap((req, res) => {
     unreadCount: NOTIFICATIONS.filter((n) => !n.read).length,
     total: NOTIFICATIONS.length,
   })
+}))
+
+/**
+ * PATCH /api/dashboard/notifications/:id/read
+ */
+router.patch('/notifications/:id/read', wrap((req, res) => {
+  const notification = NOTIFICATIONS.find((n) => n.id === req.params.id)
+  if (!notification) {
+    throw new AppError('Notification not found.', 404, 'NOT_FOUND')
+  }
+  notification.read = true
+  res.json({ data: notification })
+}))
+
+/**
+ * POST /api/dashboard/notifications/read-all
+ */
+router.post('/notifications/read-all', wrap((_req, res) => {
+  NOTIFICATIONS.forEach((n) => { n.read = true })
+  res.json({ data: NOTIFICATIONS })
 }))
 
 export default router
